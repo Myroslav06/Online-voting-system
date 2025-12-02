@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Voting System</title>
+</head>
+<body>
+    <h1>Система голосувань (Варіант 17)</h1>
+
+    <h3>Створити нове голосування (Хазяїн)</h3>
+    <form action="/create" method="post">
+        <input type="text" name="title" placeholder="Тема голосування" required>
+        <input type="text" name="owner" placeholder="Ваше ім'я (Хазяїн)" required>
+        <input type="text" name="candidates" placeholder="Претенденти (через кому)" required>
+        <button type="submit">Створити</button>
+    </form>
+
+    <hr>
+
+    <h3>Список голосувань</h3>
+    <ul>
+        <li th:each="v : ${votings}">
+            <a th:href="@{/voting/{id}(id=${v.id})}" th:text="${v.title}">Title</a>
+            <span th:if="${!v.active}" style="color: red;">(Завершено)</span>
+        </li>
+    </ul>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Vote</title>
+</head>
+<body>
+    <h1 th:text="${voting.title}">Title</h1>
+    <p>Хазяїн: <span th:text="${voting.ownerName}">Owner</span></p>
+    
+    <div th:if="${voting.active}">
+        <h3>Проголосувати:</h3>
+        <form th:action="@{/voting/{id}/vote(id=${voting.id})}" method="post">
+            <select name="candidate">
+                <option th:each="c : ${voting.candidates}" 
+                        th:value="${c.name}" 
+                        th:text="${c.name}">Name</option>
+            </select>
+            <button type="submit">Голосувати</button>
+        </form>
+        
+        <form th:action="@{/voting/{id}/toggle(id=${voting.id})}" method="post" style="margin-top: 10px;">
+             <button type="submit" style="color: red;">Зупинити голосування (Хазяїн)</button>
+        </form>
+    </div>
+
+    <div th:if="${!voting.active}">
+        <h2 style="color: red;">Голосування завершено!</h2>
+        <form th:action="@{/voting/{id}/toggle(id=${voting.id})}" method="post">
+             <button type="submit" style="color: green;">Відновити голосування (Хазяїн)</button>
+        </form>
+    </div>
+
+    <h3>Результати:</h3>
+    <ul>
+        <li th:each="c : ${voting.candidates}">
+            <span th:text="${c.name}">Name</span>: 
+            <b th:text="${c.votes}">0</b>
+        </li>
+    </ul>
+    
+    <a href="/">На головну</a>
+</body>
+</html>
