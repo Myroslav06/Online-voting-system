@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1 th:text="${voting.title}">Title</h1>
-    <p>Хазяїн: <span th:text="${voting.ownerName}">Owner</span></p>
+    <p>Власник: <span th:text="${voting.ownerName}">Owner</span></p>
     
     <div th:if="${voting.active}">
         <h3>Проголосувати:</h3>
@@ -19,7 +19,7 @@
         </form>
         
         <form th:action="@{/voting/{id}/toggle(id=${voting.id})}" method="post" style="margin-top: 10px;">
-             <button type="submit" style="color: red;">Зупинити голосування (Хазяїн)</button>
+             <button type="submit" style="color: red;">Зупинити голосування (Власник)</button>
         </form>
     </div>
 
