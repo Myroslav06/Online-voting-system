@@ -6,21 +6,29 @@
 <body>
     <h1>Система голосувань</h1>
 
-    <h3>Створити нове голосування </h3>
+    <h3>Створити нове голосування</h3>
     <form action="/create" method="post">
         <input type="text" name="title" placeholder="Тема голосування" required>
-        <input type="text" name="owner" placeholder="Ваше ім'я (Хазяїн)" required>
+        <input type="text" name="owner" placeholder="Ваше ім'я" required>
         <input type="text" name="candidates" placeholder="Претенденти (через кому)" required>
         <button type="submit">Створити</button>
     </form>
 
     <hr>
 
-    <h3>Список голосувань</h3>
+    <h3>Активні голосування</h3>
+    
+    <p th:if="${votings.empty}">
+        <em>Список голосувань порожній. Створіть перше!</em>
+    </p>
+
     <ul>
         <li th:each="v : ${votings}">
             <a th:href="@{/voting/{id}(id=${v.id})}" th:text="${v.title}">Title</a>
-            <span th:if="${!v.active}" style="color: red;">(Завершено)</span>
+            
+            <span th:text="${v.active} ? ' (Активне)' : ' (Завершено)'"
+                  th:style="${v.active} ? 'color: green;' : 'color: red;'">
+            </span>
         </li>
     </ul>
 </body>

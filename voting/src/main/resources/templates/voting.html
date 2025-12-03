@@ -1,19 +1,43 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Vote</title>
+    <title>Голосування</title>
+    <style>
+        .badge { padding: 5px 10px; color: white; border-radius: 4px; }
+        .bg-green { background-color: green; }
+        .bg-red { background-color: red; }
+        .warning { color: orange; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <h1 th:text="${voting.title}">Title</h1>
-    <p>Власник: <span th:text="${voting.ownerName}">Owner</span></p>
-    
+
+    <h1 th:text="${voting.title}">Назва голосування</h1>
+
+    <p>
+        <strong>Хазяїн:</strong>
+        <span th:text="${voting.ownerName} ?: 'Анонім'">Owner</span>
+    </p>
+
+    <div th:switch="${voting.active}">
+        <p th:case="${true}">
+            Статус: <span class="badge bg-green">ТРИВАЄ</span>
+        </p>
+        <p th:case="${false}">
+            Статус: <span class="badge bg-red">ЗАВЕРШЕНО</span>
+        </p>
+        </div>
+
+    <hr>
+
     <div th:if="${voting.active}">
-        <h3>Проголосувати:</h3>
+        <h3>Зробити вибір:</h3>
         <form th:action="@{/voting/{id}/vote(id=${voting.id})}" method="post">
             <select name="candidate">
                 <option th:each="c : ${voting.candidates}" 
                         th:value="${c.name}" 
-                        th:text="${c.name}">Name</option>
+                        th:text="${c.name}">
+                    Candidate Name
+                </option>
             </select>
             <button type="submit">Голосувати</button>
         </form>
@@ -23,21 +47,27 @@
         </form>
     </div>
 
-    <div th:if="${!voting.active}">
-        <h2 style="color: red;">Голосування завершено!</h2>
+    <div th:unless="${voting.active}">
+        <h2 style="color: red;">Голосування закрито!</h2>
+        <p>Нові голоси більше не приймаються.</p>
         <form th:action="@{/voting/{id}/toggle(id=${voting.id})}" method="post">
-             <button type="submit" style="color: green;">Відновити голосування (Хазяїн)</button>
+             <button type="submit" style="color: green;">Відновити голосування (Власник)</button>
         </form>
     </div>
+
+    <hr>
 
     <h3>Результати:</h3>
     <ul>
         <li th:each="c : ${voting.candidates}">
-            <span th:text="${c.name}">Name</span>: 
+            <span th:text="${#strings.toUpperCase(c.name)}">NAME</span>: 
             <b th:text="${c.votes}">0</b>
+            
+            <span th:if="${c.votes > 0}" style="color: blue;">(Є голоси)</span>
         </li>
     </ul>
-    
+
+    <br>
     <a href="/">На головну</a>
 </body>
 </html>
