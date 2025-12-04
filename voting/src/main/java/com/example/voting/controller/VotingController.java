@@ -34,7 +34,8 @@ public class VotingController {
 
     @GetMapping("/voting/{id}")
     public String viewVoting(@PathVariable String id, Model model) {
-        model.addAttribute("voting", service.getVoting(id));
+        // Виправлено: розпаковка Optional
+        model.addAttribute("voting", service.getVoting(id).orElse(null));
         return "voting";
     }
 
