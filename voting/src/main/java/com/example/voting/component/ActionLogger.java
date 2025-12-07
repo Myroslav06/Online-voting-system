@@ -5,8 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-// Демонстрація Bean scope = Prototype 
-// Новий об'єкт створюється при кожному виклику
+
 @Component
 @Scope("prototype")
 public class ActionLogger {

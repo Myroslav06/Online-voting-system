@@ -56,8 +56,18 @@ public class VotingRestController {
 
     @Operation(summary = "Створити голосування")
     @PostMapping
-    public ResponseEntity<Voting> create(@RequestBody Voting voting) {
-        return new ResponseEntity<>(service.createVoting(voting), HttpStatus.CREATED);
+    public ResponseEntity<Voting> create(
+            @RequestBody Voting voting,
+            @RequestParam(defaultValue = "false") boolean testRollback) {
+
+        try {
+            return new ResponseEntity<>(
+                    service.createVotingWithCandidates(voting, testRollback),
+                    HttpStatus.CREATED
+            );
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Operation(summary = "Повне оновлення (PUT)")

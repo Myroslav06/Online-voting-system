@@ -4,87 +4,81 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ReflectionUtils;
 
-import com.example.voting.model.Candidate;
 import com.example.voting.model.Voting;
-import com.example.voting.repository.VotingRepository;
+import com.example.voting.repository.VotingDao;
 
 @Service
 public class VotingService {
 
-    private final VotingRepository repository;
+    private final VotingDao votingDao;
 
-    @Autowired
-    public VotingService(VotingRepository repository) {
-        this.repository = repository;
+    public VotingService(VotingDao votingDao) {
+        this.votingDao = votingDao;
     }
 
-    // --- CRUD: CREATE (для API) ---
+    // --- CREATE ---
     public Voting createVoting(Voting voting) {
-        repository.save(voting);
-        return voting;
-    }
-
-    // --- CREATE (для HTML-форми, старий метод) ---
-    public void createVoting(String title, String owner, String candidateNames) {
-        Voting voting = new Voting();
-        voting.setTitle(title);
-        voting.setOwnerName(owner);
-        
-        // Логіка додавання кандидатів зі стрічки
-        if (candidateNames != null && !candidateNames.isEmpty()) {
-            for (String name : candidateNames.split(",")) {
-                voting.getCandidates().add(new Candidate(name.trim(), 0));
+        // Зберігаємо голосування
+        Voting saved = votingDao.save(voting);
+        // Зберігаємо кандидатів, якщо вони є
+        if (voting.getCandidates() != null) {
+            for (var candidate : voting.getCandidates()) {
+                votingDao.addCandidate(saved.getId(), candidate.getName());
             }
         }
+        return saved;
+    }
+    
+
+    public void createVoting(String title, String owner, String candidateNames) {
+        Voting v = new Voting();
+        v.setTitle(title);
+        v.setOwnerName(owner);
+        Voting saved = votingDao.save(v);
         
-        repository.save(voting);
-    }
-
-    // --- CRUD: READ (Single) ---
-    public Optional<Voting> getVoting(String id) {
-        return repository.findById(id);
-    }
-
-    // --- CRUD: READ (List with Pagination & Filtering) ---
-    public List<Voting> getAllVotings(String titleFilter, int page, int size) {
-        return repository.findAll().stream()
-                .filter(v -> titleFilter == null || v.getTitle().toLowerCase().contains(titleFilter.toLowerCase()))
-                .skip((long) page * size)
-                .limit(size)
-                .collect(Collectors.toList());
-    }
-
-    // --- READ ALL (для HTML, без пагінації) ---
-    public List<Voting> getAllVotings() {
-        return repository.findAll();
-    }
-
-    // --- CRUD: UPDATE (Full) ---
-    public Optional<Voting> updateVoting(String id, Voting newVotingData) {
-        return repository.findById(id).map(existingVoting -> {
-            existingVoting.setTitle(newVotingData.getTitle());
-            existingVoting.setOwnerName(newVotingData.getOwnerName());
-            existingVoting.setActive(newVotingData.isActive());
-            // Кандидатів можна перезаписати, якщо потрібно
-            if (newVotingData.getCandidates() != null && !newVotingData.getCandidates().isEmpty()) {
-                existingVoting.setCandidates(newVotingData.getCandidates());
+        if (candidateNames != null && !candidateNames.isEmpty()) {
+            for (String name : candidateNames.split(",")) {
+                votingDao.addCandidate(saved.getId(), name.trim());
             }
-            return existingVoting;
-        });
+        }
     }
 
-    // --- CRUD: PATCH (Partial Update) ---
-    public Optional<Voting> patchVoting(String id, Map<String, Object> fields) {
-        Optional<Voting> votingOptional = repository.findById(id);
+    public List<Voting> getAllVotings(String titleFilter, int page, int size) {
+        return votingDao.findAll(titleFilter);
+    }
+    
+    public List<Voting> getAllVotings() {
+        return votingDao.findAll(null);
+    }
 
-        if (votingOptional.isPresent()) {
-            Voting voting = votingOptional.get();
+    public Optional<Voting> getVoting(String id) {
+        return votingDao.findById(id);
+    }
+
+
+    public Optional<Voting> updateVoting(String id, Voting newVotingData) {
+        Optional<Voting> existing = votingDao.findById(id);
+        if (existing.isPresent()) {
+            Voting voting = existing.get();
+            voting.setTitle(newVotingData.getTitle());
+            voting.setOwnerName(newVotingData.getOwnerName());
+            voting.setActive(newVotingData.isActive());
+            votingDao.update(voting); // Оновлюємо в БД
+            return Optional.of(voting);
+        }
+        return Optional.empty();
+    }
+
+
+    public Optional<Voting> patchVoting(String id, Map<String, Object> fields) {
+        Optional<Voting> existing = votingDao.findById(id);
+        if (existing.isPresent()) {
+            Voting voting = existing.get();
             fields.forEach((key, value) -> {
                 Field field = ReflectionUtils.findField(Voting.class, key);
                 if (field != null) {
@@ -92,36 +86,43 @@ public class VotingService {
                     ReflectionUtils.setField(field, voting, value);
                 }
             });
+            votingDao.update(voting); // Зберігаємо зміни в БД
             return Optional.of(voting);
         }
         return Optional.empty();
     }
 
-    // --- CRUD: DELETE ---
+    // --- DELETE ---
     public boolean deleteVoting(String id) {
-        Optional<Voting> voting = repository.findById(id);
-        if (voting.isPresent()) {
-            repository.findAll().remove(voting.get());
+        Optional<Voting> v = votingDao.findById(id);
+        if (v.isPresent()) {
+            votingDao.deleteById(id);
             return true;
         }
         return false;
     }
 
-    // --- БІЗНЕС-ЛОГІКА: Голосування ---
+
+    @Transactional
     public void vote(String votingId, String candidateName) {
-        getVoting(votingId).ifPresent(voting -> {
-            if (!voting.isActive()) return;
-            voting.getCandidates().stream()
-                    .filter(c -> c.getName().equals(candidateName))
-                    .findFirst()
-                    .ifPresent(c -> c.setVotes(c.getVotes() + 1));
-        });
+
     }
     
-    // --- БІЗНЕС-ЛОГІКА: Зміна статусу (для кнопок) ---
+
     public void toggleStatus(String votingId) {
-        getVoting(votingId).ifPresent(voting -> {
+        votingDao.findById(votingId).ifPresent(voting -> {
             voting.setActive(!voting.isActive());
+            votingDao.update(voting); // Оновлюємо статус в БД
         });
+    }
+
+
+    @Transactional
+    public Voting createVotingWithCandidates(Voting voting, boolean fail) {
+        Voting saved = createVoting(voting);
+        if (fail) {
+            throw new RuntimeException("Test Rollback Exception");
+        }
+        return saved;
     }
 }
