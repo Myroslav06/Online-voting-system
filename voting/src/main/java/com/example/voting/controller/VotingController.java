@@ -3,50 +3,61 @@ package com.example.voting.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.example.voting.model.Candidate;
+import com.example.voting.model.Voting;
 import com.example.voting.service.VotingService;
 
 @Controller
 public class VotingController {
 
-    private final VotingService service;
+    private final VotingService votingService;
 
-    public VotingController(VotingService service) {
-        this.service = service;
+    public VotingController(VotingService votingService) {
+        this.votingService = votingService;
     }
 
     @GetMapping("/")
-    public String index(Model model) {
-        model.addAttribute("votings", service.getAllVotings());
+    public String index(Model model, @RequestParam(required = false) String titleFilter) {
+        model.addAttribute("votings", votingService.getAllVotings(titleFilter));
         return "index";
+    }
+
+    @GetMapping("/voting")
+    public String voting(@RequestParam String id, Model model) {
+        votingService.getVoting(id).ifPresent(v -> model.addAttribute("voting", v));
+        return "voting";
     }
 
     @PostMapping("/create")
     public String create(@RequestParam String title, 
-                         @RequestParam String owner, 
+                         @RequestParam String ownerName, 
                          @RequestParam String candidates) {
-        service.createVoting(title, owner, candidates);
+        Voting voting = new Voting();
+        voting.setTitle(title);
+        voting.setOwnerName(ownerName);
+        voting.setActive(true);
+
+        if (candidates != null && !candidates.isEmpty()) {
+            for (String name : candidates.split(",")) {
+                voting.addCandidate(new Candidate(name.trim()));
+            }
+        }
+
+        votingService.createVoting(voting);
         return "redirect:/";
     }
 
-    @GetMapping("/voting/{id}")
-    public String viewVoting(@PathVariable String id, Model model) {
-        model.addAttribute("voting", service.getVoting(id).orElse(null));
-        return "voting";
-    }
-
-    @PostMapping("/voting/{id}/vote")
-    public String vote(@PathVariable String id, @RequestParam String candidate) {
-        service.vote(id, candidate);
-        return "redirect:/voting/" + id;
+    @PostMapping("/vote")
+    public String vote(@RequestParam String votingId) {
+        return "redirect:/voting?id=" + votingId;
     }
     
-    @PostMapping("/voting/{id}/toggle")
-    public String toggleStatus(@PathVariable String id) {
-        service.toggleStatus(id);
-        return "redirect:/voting/" + id;
+    @PostMapping("/toggle")
+    public String toggle(@RequestParam String id) {
+        votingService.toggleStatus(id);
+        return "redirect:/";
     }
 }
